@@ -1,0 +1,677 @@
+<!doctype html>
+<html lang="vi"><head><script data-od-sandbox-shim="">(function(){
+  function makeStore(){
+    var data = {};
+    var api = {
+      getItem: function(k){ return Object.prototype.hasOwnProperty.call(data, k) ? data[k] : null; },
+      setItem: function(k, v){ data[k] = String(v); },
+      removeItem: function(k){ delete data[k]; },
+      clear: function(){ data = {}; },
+      key: function(i){ return Object.keys(data)[i] || null; }
+    };
+    Object.defineProperty(api, 'length', { get: function(){ return Object.keys(data).length; } });
+    return api;
+  }
+  function tryShim(name){
+    var works = false;
+    try { works = !!window[name] && typeof window[name].getItem === 'function'; void window[name].length; }
+    catch (_) { works = false; }
+    if (works) return;
+    try { Object.defineProperty(window, name, { configurable: true, value: makeStore() }); }
+    catch (_) { try { window[name] = makeStore(); } catch (__) {} }
+  }
+  tryShim('localStorage');
+  tryShim('sessionStorage');
+  document.addEventListener('click', (e) => {
+    if (!e.target || !(e.target instanceof Element)) return;
+    var link = e.target.closest('a[href]');
+    if (!link) return;
+    var href = link.getAttribute('href');
+    if (href === null) return;
+    var isAnchor = href.startsWith('#') || href === '';
+    if (isAnchor) {
+      e.preventDefault();
+      if (href === '' || href === '#') {
+        window.scrollTo({ top: 0 });
+        history.replaceState(null, '', ' ');
+      } else {
+        var targetId = href.slice(1);
+        var target = targetId ? document.getElementById(targetId) : null;
+        if (target) {
+          target.scrollIntoView();
+          location.hash === href && history.replaceState(null, '', ' ');
+          location.hash = href;
+        }
+      }
+    } else if (link.getAttribute('target') === '_blank') {
+      e.preventDefault();
+      let safe = false;
+      try {
+        var url = new PortfolioURL(href, location.href);
+        safe =
+          url.protocol === 'http:' ||
+          url.protocol === 'https:' ||
+          url.protocol === 'mailto:';
+      } catch (_) {}
+      safe && window.open(href, '_blank', 'noopener,noreferrer');
+    }
+  });
+})();</script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Portfolio — Bài tập</title>
+  <link rel="stylesheet" href="starfield.css">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --primary-pink: #FF6B9D;
+      --primary-purple: #C469FF;
+      --primary-cyan: #4DD9FF;
+      --bg: #050508;
+      --surface: #1A1A2E;
+      --text: #F5F5F7;
+      --text-muted: #A0A0B0;
+      --accent: var(--primary-pink);
+
+      --font-display: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+
+      --spacing-sm: 0.75rem;
+      --spacing-md: 1.5rem;
+      --spacing-lg: 3rem;
+      --spacing-xl: 4rem;
+    }
+
+    body.light-mode {
+      --primary-pink: #F08ACD;
+      --primary-purple: #DA9DFF;
+      --primary-cyan: #7AE8E8;
+      --bg: #FEF8F9;
+      --surface: #FFEEF4;
+      --text: #5A4A5A;
+      --text-muted: #9A8A9A;
+      --accent: #F08ACD;
+    }
+
+    body {
+      font-family: var(--font-body);
+      background: var(--bg);
+      color: var(--text);
+      color-scheme: dark;
+      line-height: 1.6;
+      overflow-x: hidden;
+      transition: background 0.3s ease, color 0.3s ease;
+    }
+
+
+    nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: var(--spacing-md) var(--spacing-lg);
+      backdrop-filter: blur(12px);
+      background: rgba(15, 15, 26, 0.8);
+      border-bottom: 1px solid rgba(77, 217, 255, 0.1);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      transition: background 0.3s ease, border-color 0.3s ease;
+    }
+
+    body.light-mode nav {
+      background: rgba(254, 232, 244, 0.85);
+      border-bottom: 1px solid rgba(240, 138, 205, 0.2);
+    }
+
+    .logo img {
+      height: 36px;
+      width: auto;
+      display: block;
+    }
+
+    nav ul {
+      display: flex;
+      list-style: none;
+      gap: var(--spacing-lg);
+    }
+
+    nav a {
+      text-decoration: none;
+      color: var(--text);
+      font-size: 0.95rem;
+      font-weight: 500;
+      transition: color 0.3s ease;
+      position: relative;
+    }
+
+    nav a:hover {
+      color: var(--primary-cyan);
+    }
+
+    nav a::after {
+      content: '';
+      position: absolute;
+      bottom: -4px;
+      left: 0;
+      width: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--primary-pink), var(--primary-cyan));
+      transition: width 0.3s ease;
+    }
+
+    nav a:hover::after {
+      width: 100%;
+    }
+
+    .theme-toggle {
+      background: none;
+      border: none;
+      font-size: 1.5rem;
+      cursor: pointer;
+      transition: transform 0.3s ease;
+      padding: 0.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .theme-toggle:hover {
+      transform: scale(1.15) rotate(20deg);
+    }
+
+    .section {
+      padding: var(--spacing-xl) var(--spacing-lg);
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .section-title {
+      font-size: clamp(2rem, 5vw, 3rem);
+      font-weight: 800;
+      margin-bottom: var(--spacing-lg);
+      position: relative;
+      display: inline-block;
+      background: linear-gradient(135deg, var(--primary-pink), var(--primary-cyan));
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .section-title::after {
+      content: '';
+      position: absolute;
+      bottom: -8px;
+      left: 0;
+      width: 60px;
+      height: 4px;
+      background: linear-gradient(90deg, var(--primary-pink), var(--primary-cyan));
+      border-radius: 2px;
+    }
+
+    .projects-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: var(--spacing-lg);
+      margin-top: var(--spacing-lg);
+    }
+
+    .project-card {
+      background: var(--surface);
+      border: 1px solid rgba(77, 217, 255, 0.2);
+      border-radius: 16px;
+      overflow: hidden;
+      transition: all 0.3s ease;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+
+    .project-card:hover {
+      border-color: var(--primary-cyan);
+      transform: translateY(-6px);
+      box-shadow: 0 20px 40px rgba(77, 217, 255, 0.15);
+    }
+
+    .project-image {
+      width: 100%;
+      aspect-ratio: 16 / 10;
+      background: linear-gradient(135deg, rgba(255, 107, 157, 0.15), rgba(77, 217, 255, 0.15));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+      font-size: 2.5rem;
+    }
+
+    .project-content {
+      padding: var(--spacing-md);
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+      flex: 1;
+    }
+
+    .project-title {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    h3 {
+      background: linear-gradient(135deg, var(--primary-pink), var(--primary-purple));
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .project-description {
+      font-size: 0.95rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+
+    .btn {
+      padding: 0.8rem 1.8rem;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      text-decoration: none;
+      display: inline-block;
+      text-align: center;
+    }
+
+    .btn-secondary {
+      background: transparent;
+      color: var(--primary-cyan);
+      border: 2px solid var(--primary-cyan);
+      width: fit-content;
+      margin-top: auto;
+      align-self: flex-start;
+    }
+
+    .btn-secondary:hover {
+      background: rgba(77, 217, 255, 0.1);
+      transform: translateY(-2px);
+    }
+
+    footer {
+      background: var(--surface);
+      border-top: 1px solid rgba(77, 217, 255, 0.1);
+      padding: var(--spacing-xl) var(--spacing-lg);
+      margin-top: var(--spacing-xl);
+    }
+
+    .footer-content {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: var(--spacing-lg);
+      margin-bottom: var(--spacing-lg);
+    }
+
+    .footer-section h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: var(--spacing-md);
+      color: var(--text);
+    }
+
+    .footer-section ul {
+      list-style: none;
+    }
+
+    .footer-section ul li {
+      margin-bottom: var(--spacing-sm);
+    }
+
+    .footer-section a {
+      color: var(--text-muted);
+      text-decoration: none;
+      transition: color 0.3s ease;
+    }
+
+    .footer-section a:hover {
+      color: var(--primary-cyan);
+    }
+
+    .footer-bottom {
+      border-top: 1px solid rgba(77, 217, 255, 0.1);
+      padding-top: var(--spacing-lg);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: var(--spacing-md);
+    }
+
+    .social-links {
+      display: flex;
+      gap: var(--spacing-md);
+    }
+
+    .social-links a {
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(77, 217, 255, 0.1);
+      border-radius: 50%;
+      color: var(--text);
+      text-decoration: none;
+      transition: all 0.3s ease;
+      border: 1px solid rgba(77, 217, 255, 0.2);
+    }
+
+    .social-links a:hover {
+      background: var(--primary-cyan);
+      color: var(--bg);
+      border-color: var(--primary-cyan);
+    }
+
+    @media (max-width: 768px) {
+      nav {
+        padding: var(--spacing-md);
+      }
+
+      nav ul {
+        gap: var(--spacing-md);
+      }
+
+      .section {
+        padding: var(--spacing-lg) var(--spacing-md);
+      }
+
+      .projects-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+<style data-od-tweaks-bridge-style="">
+[data-od-tweaks-hidden] .tw-panel {
+  transform: translateX(calc(100% + 32px)) !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+.tw-restore { display: none !important; }
+</style><script data-od-tweaks-bridge="">(function(){
+  document.documentElement.setAttribute('data-od-tweaks-hidden', '');
+
+  var suppressEcho = false;
+  var observer = null;
+
+  function panelEl(){ return document.querySelector('.tw-panel'); }
+
+  function applyClassesToPanel(visible){
+    var panel = panelEl();
+    if (panel) panel.classList.toggle('tw-hidden', !visible);
+  }
+
+  function setPanelVisible(visible){
+    suppressEcho = true;
+    document.documentElement.toggleAttribute('data-od-tweaks-hidden', !visible);
+    applyClassesToPanel(visible);
+    Promise.resolve().then(function(){ suppressEcho = false; });
+  }
+
+  function postState(){
+    var panel = panelEl();
+    if (!panel) return;
+    try {
+      parent.postMessage({
+        type: 'od:tweaks-panel-state',
+        visible: !panel.classList.contains('tw-hidden'),
+      }, '*');
+    } catch (e) {}
+  }
+
+  function postAvailability(){
+    try {
+      parent.postMessage({
+        type: 'od:tweaks-available',
+        available: !!panelEl(),
+      }, '*');
+    } catch (e) {}
+  }
+
+  function attachObserver(){
+    var panel = panelEl();
+    if (!panel || observer) return;
+    observer = new MutationObserver(function(){
+      if (suppressEcho) return;
+      postState();
+    });
+    observer.observe(panel, { attributes: true, attributeFilter: ['class'] });
+  }
+
+  function onReady(){
+    var panel = panelEl();
+    var initialVisible = !!panel && !panel.classList.contains('tw-hidden');
+    document.documentElement.toggleAttribute('data-od-tweaks-hidden', !initialVisible);
+    applyClassesToPanel(initialVisible);
+    attachObserver();
+    postAvailability();
+    postState();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', onReady);
+  } else {
+    onReady();
+  }
+
+  window.addEventListener('message', function(ev){
+    if (!ev.data || ev.data.type !== 'od:tweaks-panel-visible') return;
+    setPanelVisible(!!ev.data.visible);
+  });
+})();</script></head>
+<body>
+  <nav data-od-id="path-0">
+    <a class="logo" href="index.html" data-od-id="path-0-0">
+      <img src="images/logo.png" alt="Logo" />
+    </a>
+    <ul>
+      <li><a href="index.html" data-od-id="path-0-1-0-0">Trang chủ</a></li>
+      <li><a href="projects.html" data-od-id="path-0-1-2-0">Bài tập</a></li>
+      <li><a href="summary.html" data-od-id="path-0-1-3-0">Tổng kết</a></li>
+    </ul>
+  </nav>
+
+  <main>
+    <section class="section" data-od-id="path-1">
+      <h2 class="section-title">Bài tập thành phần</h2>
+      <p>Các bài tập được trình bày theo đúng lộ trình năng lực số. Mỗi bài tập có mô tả ngắn gọn và liên kết tải PDF trực tiếp từ repo GitHub Pages.</p>
+      <div class="projects-grid">
+        <div class="project-card">
+          <div class="project-image">📁</div>
+          <div class="project-content">
+            <h3 class="project-title">Bài tập 1 - Quản lý tệp và thư mục</h3>
+            <p class="project-description">Tổ chức hệ thống lưu trữ khoa học, đặt tên tệp/thư mục nhất quán và quản lý phiên bản để đảm bảo truy xuất nhanh và minh bạch dữ liệu học tập.</p>
+            <a class="btn btn-secondary" href="documents/1.pdf" target="_blank" rel="noopener noreferrer">Tải PDF</a>
+          </div>
+        </div>
+
+        <div class="project-card">
+          <div class="project-image">🔎</div>
+          <div class="project-content">
+            <h3 class="project-title">Bài tập 2 - Tìm kiếm và đánh giá thông tin</h3>
+            <p class="project-description">Ứng dụng các toán tử tìm kiếm nâng cao và xây dựng tiêu chí đánh giá nguồn tin khoa học nhằm đảm bảo độ tin cậy.</p>
+            <a class="btn btn-secondary" href="documents/2.pdf" target="_blank" rel="noopener noreferrer">Tải PDF</a>
+          </div>
+        </div>
+
+        <div class="project-card">
+          <div class="project-image">🧠</div>
+          <div class="project-content">
+            <h3 class="project-title">Bài tập 3 - Viết Prompt hiệu quả</h3>
+            <p class="project-description">Cải tiến prompt theo vai trò, bối cảnh và ràng buộc rõ ràng để tăng độ chính xác và chất lượng đầu ra AI.</p>
+            <a class="btn btn-secondary" href="documents/3.pdf" target="_blank" rel="noopener noreferrer">Tải PDF</a>
+          </div>
+        </div>
+
+        <div class="project-card">
+          <div class="project-image">🤝</div>
+          <div class="project-content">
+            <h3 class="project-title">Bài tập 4 - Công cụ trực tuyến</h3>
+            <p class="project-description">Vận hành quy trình cộng tác trực tuyến bằng công cụ quản lý dự án, phân chia nhiệm vụ và theo dõi tiến độ.</p>
+            <a class="btn btn-secondary" href="documents/4.pdf" target="_blank" rel="noopener noreferrer">Tải PDF</a>
+          </div>
+        </div>
+
+        <div class="project-card">
+          <div class="project-image">✨</div>
+          <div class="project-content">
+            <h3 class="project-title">Bài tập 5 - Sáng tạo nội dung với AI</h3>
+            <p class="project-description">Thiết lập pipeline sáng tạo nội dung số bằng Generative AI, kết hợp kiểm soát chất lượng và tối ưu hiệu quả truyền thông.</p>
+            <a class="btn btn-secondary" href="documents/5.pdf" target="_blank" rel="noopener noreferrer">Tải PDF</a>
+          </div>
+        </div>
+
+        <div class="project-card">
+          <div class="project-image">⚖️</div>
+          <div class="project-content">
+            <h3 class="project-title">Bài tập 6 - AI có trách nhiệm</h3>
+            <p class="project-description">Xây dựng bộ nguyên tắc cá nhân về đạo đức AI, tập trung vào bảo mật, chống đạo văn và giảm thiên lệch.</p>
+            <a class="btn btn-secondary" href="documents/6.pdf" target="_blank" rel="noopener noreferrer">Tải PDF</a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer data-od-id="path-4">
+    <div class="footer-content" data-od-id="path-4-0">
+      <div class="footer-section">
+        <h3 data-od-id="path-4-0-0-0">Điều hướng</h3>
+        <ul>
+          <li><a href="index.html" data-od-id="path-4-0-0-1-0-0">Trang chủ</a></li>
+          <li><a href="projects.html" data-od-id="path-4-0-0-1-1-0">Bài tập</a></li>
+          <li><a href="summary.html" data-od-id="path-4-0-0-1-2-0">Tổng kết</a></li>
+        </ul>
+      </div>
+      <div class="footer-section">
+        <h3 data-od-id="path-4-0-1-0">Liên hệ</h3>
+        <ul>
+          <li><a href="mailto:akari@student.edu" data-od-id="path-4-0-1-1-0-0">Email</a></li>
+          <li><a href="https://github.com/ak4ri" data-od-id="path-4-0-1-1-1-0">GitHub</a></li>
+          <li><a href="https://www.facebook.com/vietanh.nguyennang" data-od-id="path-4-0-1-1-2-0">Facebook</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom" data-od-id="path-4-1">
+      <p>© 2026 Ak4ri. All rights reserved.</p>
+      <div class="social-links">
+        <a href="https://github.com/ak4ri" title="GitHub" data-od-id="path-4-1-1-0">GH</a>
+        <a href="https://www.facebook.com/vietanh.nguyennang" title="Facebook" data-od-id="path-4-1-1-1">FB</a>
+        <a href="mailto:akari@student.edu" title="Email" data-od-id="path-4-1-1-2">✉</a>
+      </div>
+    </div>
+  </footer>
+
+  </script>
+
+<script data-od-snapshot-bridge="">(function(){
+  function copyComputedStyle(source, target){
+    if (!source || !target || source.nodeType !== 1 || target.nodeType !== 1) return;
+    var computed = window.getComputedStyle(source);
+    var style = target.getAttribute('style') || '';
+    for (var i = 0; i < computed.length; i++){
+      var prop = computed[i];
+      style += prop + ':' + computed.getPropertyValue(prop) + ';';
+    }
+    target.setAttribute('style', style);
+  }
+  function syncElementState(source, target){
+    var tag = source.tagName ? source.tagName.toLowerCase() : '';
+    if (tag === 'img' && source.currentSrc) target.setAttribute('src', source.currentSrc);
+    if (tag === 'input' || tag === 'textarea') target.setAttribute('value', source.value || '');
+    if (tag === 'canvas') {
+      try {
+        var img = document.createElement('img');
+        img.setAttribute('src', source.toDataURL('image/png'));
+        img.setAttribute('style', target.getAttribute('style') || '');
+        target.parentNode && target.parentNode.replaceChild(img, target);
+      } catch (_) {}
+    }
+  }
+  function inlineSnapshotStyles(originalRoot, cloneRoot){
+    copyComputedStyle(originalRoot, cloneRoot);
+    syncElementState(originalRoot, cloneRoot);
+    var originals = originalRoot.querySelectorAll('*');
+    var clones = cloneRoot.querySelectorAll('*');
+    var count = Math.min(originals.length, clones.length);
+    for (var i = 0; i < count; i++){
+      copyComputedStyle(originals[i], clones[i]);
+      syncElementState(originals[i], clones[i]);
+    }
+    var scripts = cloneRoot.querySelectorAll('script');
+    for (var s = scripts.length - 1; s >= 0; s--) scripts[s].remove();
+  }
+  function waitForImages(){
+    var imgs = Array.prototype.slice.call(document.images || []);
+    return Promise.all(imgs.map(function(img){
+      if (img.complete) return Promise.resolve();
+      return new Promise(function(resolve){
+        img.addEventListener('load', resolve, { once: true });
+        img.addEventListener('error', resolve, { once: true });
+      });
+    }));
+  }
+  function renderSnapshot(id){
+    var w = Math.max(1, window.innerWidth || document.documentElement.clientWidth || 1);
+    var h = Math.max(1, window.innerHeight || document.documentElement.clientHeight || 1);
+    var dpr = window.devicePixelRatio || 1;
+    var docW = Math.max(w, document.documentElement.scrollWidth || 0, document.body ? document.body.scrollWidth : 0);
+    var docH = Math.max(h, document.documentElement.scrollHeight || 0, document.body ? document.body.scrollHeight : 0);
+    var clone = document.documentElement.cloneNode(true);
+    clone.setAttribute('xmlns', 'http://www.w3.org/1999/xhtml');
+    inlineSnapshotStyles(document.documentElement, clone);
+    var serializer = new XMLSerializer();
+    var html = serializer.serializeToString(clone);
+    var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + w + '" height="' + h + '" viewBox="0 0 ' + w + ' ' + h + '">' +
+      '<foreignObject x="' + (-window.scrollX || 0) + '" y="' + (-window.scrollY || 0) + '" width="' + docW + '" height="' + docH + '">' +
+      html +
+      '</foreignObject></svg>';
+    var img = new Image();
+    img.onload = function(){
+      try {
+        var canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, Math.floor(w * dpr));
+        canvas.height = Math.max(1, Math.floor(h * dpr));
+        var ctx = canvas.getContext('2d');
+        if (!ctx) throw new Error('no 2d context');
+        ctx.scale(dpr, dpr);
+        ctx.drawImage(img, 0, 0, w, h);
+        window.parent.postMessage({ type: 'od:snapshot:result', id: id, dataUrl: canvas.toDataURL('image/png'), w: canvas.width, h: canvas.height }, '*');
+      } catch (err) {
+        window.parent.postMessage({ type: 'od:snapshot:result', id: id, error: String(err && err.message || err) }, '*');
+      }
+    };
+    img.onerror = function(){
+      window.parent.postMessage({ type: 'od:snapshot:result', id: id, error: 'snapshot image failed' }, '*');
+    };
+    img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+  }
+  window.addEventListener('message', function(ev){
+    var data = ev && ev.data;
+    if (!data || data.type !== 'od:snapshot' || !data.id) return;
+    waitForImages().then(function(){ renderSnapshot(String(data.id)); });
+  });
+})();</script><script data-od-srcdoc-transport-activation="">(function(){
+  window.addEventListener('message', function(ev){
+    var data = ev && ev.data;
+    if (!data || data.type !== 'od:srcdoc-transport-activate' || typeof data.html !== 'string') return;
+    document.open();
+    document.write(data.html);
+    document.close();
+  });
+})();</script></body></html>
